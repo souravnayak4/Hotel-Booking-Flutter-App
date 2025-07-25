@@ -1,12 +1,11 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:hotelbooking/app/core/services/network_service.dart';
-import 'package:hotelbooking/app/core/services/shared_pref_service.dart';
+import 'package:hotelbooking/app/features/auth/presentation/controllers/login_controller.dart';
+import 'package:hotelbooking/app/features/owner/presentation/pages/hotel_details.dart';
+import 'package:provider/provider.dart';
+
 import 'package:hotelbooking/app/core/widgets/widget_support.dart';
-import 'package:hotelbooking/app/features/auth/data/datasources/database.dart';
-import 'package:hotelbooking/app/features/auth/presentation/pages/signup_page.dart';
 import 'package:hotelbooking/app/features/hotel/presentation/pages/main_navigation_page.dart';
-import 'package:random_string/random_string.dart';
+import 'signup_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,79 +15,13 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  String email = "", password = "";
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  userLogin() async {
-    if (emailController.text.isNotEmpty && passwordController.text.isNotEmpty) {
-      //  Check Internet Before Proceeding
-      bool hasInternet = await NetworkServiceHelper.hasInternetConnection();
-      if (!hasInternet) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.red,
-            content: Text(
-              "No Internet Connection",
-              style: TextStyle(fontSize: 18.0),
-            ),
-          ),
-        );
-        return;
-      }
-
-      try {
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.green,
-            content: Text(
-              "LogIn Successfully",
-              style: TextStyle(fontSize: 18.0),
-            ),
-          ),
-        );
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainNavigationPage()),
-        );
-      } on FirebaseAuthException catch (e) {
-        String message = "";
-        if (e.code == "user-not-found") {
-          message = "No User Found For that Email ";
-        } else if (e.code == "wrong-password") {
-          message = "Wrong Password Provided By the User";
-        } else {
-          message = "Somting Wrong: ${e.message}";
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.orangeAccent,
-            content: Text(message, style: const TextStyle(fontSize: 18.0)),
-          ),
-        );
-      }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Colors.red,
-          content: Text(
-            "Please fill all fields",
-            style: TextStyle(fontSize: 18.0),
-          ),
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final controller = Provider.of<LoginController>(context);
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
@@ -124,14 +57,11 @@ class _LoginPageState extends State<LoginPage> {
             const SizedBox(height: 30.0),
 
             /// Email Label
-            Padding(
-              padding: const EdgeInsets.only(left: 5.0),
+            const Padding(
+              padding: EdgeInsets.only(left: 5.0),
               child: Text(
                 'Email',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
               ),
             ),
             const SizedBox(height: 8.0),
@@ -156,14 +86,11 @@ class _LoginPageState extends State<LoginPage> {
             const SizedBox(height: 20.0),
 
             /// Password Label
-            Padding(
-              padding: const EdgeInsets.only(left: 5.0),
+            const Padding(
+              padding: EdgeInsets.only(left: 5.0),
               child: Text(
                 'Password',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
               ),
             ),
             const SizedBox(height: 8.0),
@@ -187,7 +114,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
             const SizedBox(height: 10.0),
 
-            /// Forgot Password (Right aligned)
+            /// Forgot Password
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
@@ -207,16 +134,44 @@ class _LoginPageState extends State<LoginPage> {
             /// Login Button
             Center(
               child: GestureDetector(
-                onTap: () {
-                  if (emailController.text != "" &&
-                      passwordController.text != "") {
-                    setState(() {
-                      email = emailController.text;
-                      password = passwordController.text;
-                    });
-                    userLogin();
+                onTap: () async {
+                  final email = emailController.text.trim();
+                  final password = passwordController.text.trim();
+
+                  if (email.isNotEmpty && password.isNotEmpty) {
+                    await controller.login(email, password);
+
+                    if (controller.errorMessage == null) {
+                      //  Success Message
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Login Successful"),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const HotelDetailsByOwnerPage(),
+                        ),
+                      );
+                    } else {
+                      //  Error Message from controller
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(controller.errorMessage!),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please fill all fields')),
+                    );
                   }
                 },
+
                 child: Container(
                   height: 55.0,
                   width: MediaQuery.of(context).size.width * 0.8,
@@ -224,15 +179,17 @@ class _LoginPageState extends State<LoginPage> {
                     color: const Color(0xFF0766B3),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Center(
-                    child: Text(
-                      'Log In',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20.0,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  child: Center(
+                    child: controller.isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            'Log In',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20.0,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                 ),
               ),

@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:hotelbooking/app/core/services/shared_pref_service.dart';
+import 'package:provider/provider.dart';
 import 'package:hotelbooking/app/core/widgets/widget_support.dart';
-import 'package:hotelbooking/app/core/services/network_service.dart';
-import 'package:hotelbooking/app/features/auth/data/datasources/database.dart';
+import 'package:hotelbooking/app/features/auth/presentation/controllers/signup_controller.dart';
 import 'package:hotelbooking/app/features/auth/presentation/pages/login_page.dart';
-
 import 'package:hotelbooking/app/features/hotel/presentation/pages/main_navigation_page.dart';
-import 'package:random_string/random_string.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -17,97 +13,14 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
-  String name = "", email = "", password = "";
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  registration() async {
-    if (nameController.text.isNotEmpty &&
-        emailController.text.isNotEmpty &&
-        passwordController.text.isNotEmpty) {
-      // Check Internet Before Proceeding
-      bool hasInternet = await NetworkServiceHelper.hasInternetConnection();
-      if (!hasInternet) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.red,
-            content: Text(
-              "No Internet Connection",
-              style: TextStyle(fontSize: 18.0),
-            ),
-          ),
-        );
-        return;
-        //Stop execution if no internet
-      }
-
-      try {
-        UserCredential userCredential = await FirebaseAuth.instance
-            .createUserWithEmailAndPassword(email: email, password: password);
-
-        String id = randomAlphaNumeric(10);
-
-        Map<String, dynamic> userInfoMap = {
-          "Name": nameController.text,
-          "Email": emailController.text,
-          "Id": id,
-        };
-
-        // Save user data in Shared Preferences
-        await SharedPrefServiceHelper().saveUserName(nameController.text);
-        await SharedPrefServiceHelper().saveUserEmail(emailController.text);
-        await SharedPrefServiceHelper().saveUserId(id);
-
-        // Save user info in Database
-        await DatabaseMethods().addUserInfo(userInfoMap, id);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.green,
-            content: Text(
-              "Registered Successfully",
-              style: TextStyle(fontSize: 18.0),
-            ),
-          ),
-        );
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainNavigationPage()),
-        );
-      } on FirebaseAuthException catch (e) {
-        String message = "";
-        if (e.code == "weak-password") {
-          message = "Password provided is too weak";
-        } else if (e.code == "email-already-in-use") {
-          message = "Account already exists";
-        } else {
-          message = "Registration failed: ${e.message}";
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.orangeAccent,
-            content: Text(message, style: const TextStyle(fontSize: 18.0)),
-          ),
-        );
-      }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Colors.red,
-          content: Text(
-            "Please fill all fields",
-            style: TextStyle(fontSize: 18.0),
-          ),
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final signupController = Provider.of<SignupController>(context);
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
@@ -116,24 +29,18 @@ class _SignupPageState extends State<SignupPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              //Image
               Center(
                 child: Image.asset(
                   'images/signup.png',
                   height: 250,
                   width: 250,
-                  fit: BoxFit.cover,
                 ),
               ),
               const SizedBox(height: 15.0),
-
-              // Title
               Center(
                 child: Text('Sign Up', style: AppWidget.headelinetextstyle(28)),
               ),
               const SizedBox(height: 8.0),
-
-              //Subtitle
               Center(
                 child: Text(
                   'Please enter the details to continue.',
@@ -143,137 +50,75 @@ class _SignupPageState extends State<SignupPage> {
               ),
               const SizedBox(height: 30.0),
 
-              //Name Field
-              const Padding(
-                padding: EdgeInsets.only(left: 25.0),
-                child: Text(
-                  'Name',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
-                ),
-              ),
-              const SizedBox(height: 8.0),
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20.0),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F6FA),
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                child: TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.person, color: Color(0xFF0766B3)),
-                    border: InputBorder.none,
-                    hintText: 'Enter Name',
-                    contentPadding: EdgeInsets.symmetric(vertical: 15.0),
-                  ),
-                ),
-              ),
+              // Name
+              buildTextField("Name", Icons.person, nameController),
               const SizedBox(height: 20.0),
 
-              //Email Field
-              const Padding(
-                padding: EdgeInsets.only(left: 25.0),
-                child: Text(
-                  'Email',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
-                ),
-              ),
-              const SizedBox(height: 8.0),
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20.0),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F6FA),
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                child: TextField(
-                  controller: emailController,
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.mail, color: Color(0xFF0766B3)),
-                    border: InputBorder.none,
-                    hintText: 'Enter Email',
-                    contentPadding: EdgeInsets.symmetric(vertical: 15.0),
-                  ),
-                ),
-              ),
+              // Email
+              buildTextField("Email", Icons.mail, emailController),
               const SizedBox(height: 20.0),
 
-              // Password Field
-              const Padding(
-                padding: EdgeInsets.only(left: 25.0),
-                child: Text(
-                  'Password',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
-                ),
-              ),
-              const SizedBox(height: 8.0),
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20.0),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F6FA),
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                child: TextField(
-                  controller: passwordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.lock, color: Color(0xFF0766B3)),
-                    border: InputBorder.none,
-                    hintText: 'Enter Password',
-                    contentPadding: EdgeInsets.symmetric(vertical: 15.0),
-                  ),
-                ),
+              // Password
+              buildTextField(
+                "Password",
+                Icons.lock,
+                passwordController,
+                obscure: true,
               ),
               const SizedBox(height: 35.0),
 
               // Sign Up Button
               GestureDetector(
-                onTap: () {
-                  setState(() {
-                    name = nameController.text;
-                    email = emailController.text;
-                    password = passwordController.text;
-                  });
-                  registration();
-                },
-                child: Center(
-                  child: Container(
-                    height: 55.0,
-                    width: MediaQuery.of(context).size.width * 0.8,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0766B3),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'Sign Up',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20.0,
-                          fontWeight: FontWeight.bold,
-                        ),
+                onTap: () async {
+                  String? result = await signupController.registerUser(
+                    name: nameController.text,
+                    email: emailController.text,
+                    password: passwordController.text,
+                  );
+
+                  if (result == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Registered Successfully"),
+                        backgroundColor: Colors.green,
                       ),
-                    ),
-                  ),
-                ),
+                    );
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const MainNavigationPage(),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(result),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
+                child: signupController.isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : buildButton("Sign Up"),
               ),
               const SizedBox(height: 10.0),
 
+              // Login Redirect
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Already have an account ? ',
+                    'Already have an account? ',
                     style: AppWidget.normaltextstyle(18.0),
                   ),
                   GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LoginPage(),
-                        ),
-                      );
-                    },
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LoginPage(),
+                      ),
+                    ),
                     child: Text(
                       'Login',
                       style: AppWidget.headelinetextstyle(20.0),
@@ -282,6 +127,67 @@ class _SignupPageState extends State<SignupPage> {
                 ],
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget buildTextField(
+    String label,
+    IconData icon,
+    TextEditingController controller, {
+    bool obscure = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 25.0),
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+          ),
+        ),
+        const SizedBox(height: 8.0),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20.0),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF5F6FA),
+            borderRadius: BorderRadius.circular(8.0),
+          ),
+          child: TextField(
+            controller: controller,
+            obscureText: obscure,
+            decoration: InputDecoration(
+              prefixIcon: Icon(icon, color: const Color(0xFF0766B3)),
+              border: InputBorder.none,
+              hintText: 'Enter $label',
+              contentPadding: const EdgeInsets.symmetric(vertical: 15.0),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildButton(String text) {
+    return Center(
+      child: Container(
+        height: 55.0,
+        width: MediaQuery.of(context).size.width * 0.8,
+        decoration: BoxDecoration(
+          color: const Color(0xFF0766B3),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Center(
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20.0,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),
