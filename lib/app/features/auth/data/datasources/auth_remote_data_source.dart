@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 
 abstract class AuthRemoteDataSource {
-  Future<void> signup(String email, String password);
+  Future<String> signup(String email, String password);
   Future<void> login(String email, String password);
 }
 
@@ -11,11 +11,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   AuthRemoteDataSourceImpl(this.firebaseAuth);
 
   @override
-  Future<void> signup(String email, String password) async {
-    await firebaseAuth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
+  Future<String> signup(String email, String password) async {
+    UserCredential userCredential = await firebaseAuth
+        .createUserWithEmailAndPassword(email: email, password: password);
+    return userCredential.user!.uid;
   }
 
   @override

@@ -2,7 +2,6 @@ import 'package:hotelbooking/app/features/auth/domain/auth_repository.dart';
 import 'package:hotelbooking/app/features/auth/data/datasources/auth_local_data_source.dart';
 import 'package:hotelbooking/app/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:hotelbooking/app/features/auth/data/datasources/database.dart';
-import 'package:random_string/random_string.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
@@ -17,13 +16,13 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> signup(String name, String email, String password) async {
-    await remoteDataSource.signup(email, password);
-    String id = randomAlphaNumeric(10);
+    // Get Firebase UID
+    String uid = await remoteDataSource.signup(email, password);
 
-    Map<String, dynamic> userMap = {"Name": name, "Email": email, "Id": id};
+    Map<String, dynamic> userMap = {"Name": name, "Email": email, "Id": uid};
 
-    await localDataSource.saveUser(name, email, id);
-    await databaseMethods.addUserInfo(userMap, id);
+    await localDataSource.saveUser(name, email, uid);
+    await databaseMethods.addUserInfo(userMap, uid);
   }
 
   @override

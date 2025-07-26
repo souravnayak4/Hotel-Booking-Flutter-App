@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hotelbooking/app/features/owner/presentation/pages/hotel_details.dart';
 import 'package:provider/provider.dart';
 import 'package:hotelbooking/app/core/widgets/widget_support.dart';
 import 'package:hotelbooking/app/features/auth/presentation/controllers/signup_controller.dart';
@@ -86,7 +87,7 @@ class _SignupPageState extends State<SignupPage> {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const MainNavigationPage(),
+                        builder: (context) => const HotelDetailsByOwnerPage(),
                       ),
                     );
                   } else {
