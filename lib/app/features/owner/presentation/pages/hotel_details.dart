@@ -20,6 +20,8 @@ class _HotelDetailsByOwnerPageState extends State<HotelDetailsByOwnerPage> {
   final TextEditingController checkOutController = TextEditingController();
 
   String? selectedCity;
+  bool isLoading = false;
+
   final List<String> cities = [
     "Delhi",
     "Mumbai",
@@ -48,7 +50,7 @@ class _HotelDetailsByOwnerPageState extends State<HotelDetailsByOwnerPage> {
   File? hotelImage;
   final ImagePicker _picker = ImagePicker();
 
-  /// Pick Image from Gallery
+  /// Pick Image
   Future<void> pickImage() async {
     final XFile? pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -67,9 +69,7 @@ class _HotelDetailsByOwnerPageState extends State<HotelDetailsByOwnerPage> {
       initialTime: TimeOfDay.now(),
     );
     if (time != null) {
-      setState(() {
-        controller.text = time.format(context);
-      });
+      controller.text = time.format(context);
     }
   }
 
@@ -90,12 +90,10 @@ class _HotelDetailsByOwnerPageState extends State<HotelDetailsByOwnerPage> {
     });
   }
 
-  /// Save Hotel Details
+  /// Save Hotel
   Future<void> saveHotelDetails() async {
     if (hotelImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select a hotel image")),
-      );
+      _showSnackBar("Please select a hotel image");
       return;
     }
     if (hotelNameController.text.trim().isEmpty ||
@@ -104,11 +102,11 @@ class _HotelDetailsByOwnerPageState extends State<HotelDetailsByOwnerPage> {
         checkInController.text.trim().isEmpty ||
         checkOutController.text.trim().isEmpty ||
         roomCategories.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Please fill all details")));
+      _showSnackBar("Please fill all details");
       return;
     }
+
+    setState(() => isLoading = true);
 
     String? result = await _hotelController.saveHotel(
       hotelName: hotelNameController.text.trim(),
@@ -120,16 +118,20 @@ class _HotelDetailsByOwnerPageState extends State<HotelDetailsByOwnerPage> {
       roomCategories: roomCategories,
     );
 
+    setState(() => isLoading = false);
+
     if (result == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Hotel saved successfully")));
+      _showSnackBar("Hotel saved successfully");
       clearForm();
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error: $result")));
+      _showSnackBar("Error: $result");
     }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void clearForm() {
@@ -229,17 +231,22 @@ class _HotelDetailsByOwnerPageState extends State<HotelDetailsByOwnerPage> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: saveHotelDetails,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          padding: const EdgeInsets.all(15),
-                        ),
-                        child: const Text(
-                          "Save Details",
-                          style: TextStyle(color: Colors.white, fontSize: 18),
-                        ),
-                      ),
+                      isLoading
+                          ? const CircularProgressIndicator()
+                          : ElevatedButton(
+                              onPressed: saveHotelDetails,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                padding: const EdgeInsets.all(15),
+                              ),
+                              child: const Text(
+                                "Save Details",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ),
                     ],
                   ),
                 ),

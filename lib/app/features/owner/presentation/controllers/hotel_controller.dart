@@ -14,7 +14,10 @@ class HotelController {
         .child("hotel_images")
         .child(fileName);
 
+    // Upload image
     await ref.putFile(imageFile);
+
+    //  Return the download URL
     return await ref.getDownloadURL();
   }
 
@@ -32,19 +35,18 @@ class HotelController {
       final User? currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) return "User not logged in";
 
-      // Owner ID from logged-in user
       String ownerId = currentUser.uid;
 
-      // Upload image and generate hotelId
+      //  Upload image and store download URL
       String imageUrl = await uploadImage(hotelImage);
       String hotelId = "${ownerId}_${DateTime.now().millisecondsSinceEpoch}";
 
-      // Admin details (Static OR can fetch from Firestore if needed)
+      // Static admin data (or dynamic from Firestore)
       const String adminId = "ADMIN_UID";
       const String adminEmail = "test1@mail.com";
       const String adminName = "hello";
 
-      // Prepare room categories array
+      // Format room categories
       List<Map<String, dynamic>> formattedCategories = roomCategories.map((
         cat,
       ) {
@@ -56,7 +58,7 @@ class HotelController {
         };
       }).toList();
 
-      // ✅ Hotel Data Map
+      //  Hotel Data
       Map<String, dynamic> hotelData = {
         "adminId": adminId,
         "adminEmail": adminEmail,
@@ -67,12 +69,12 @@ class HotelController {
         "checkIn": checkIn,
         "checkOut": checkOut,
         "ownerId": ownerId,
-        "hotelImage": imageUrl,
+        "hotelImage": imageUrl, //  Use download URL here
         "roomCategories": formattedCategories,
         "createdAt": FieldValue.serverTimestamp(),
       };
 
-      // Save in Firestore
+      //  Save to Firestore
       await firestore.collection("hotels").doc(hotelId).set(hotelData);
 
       return null; // Success

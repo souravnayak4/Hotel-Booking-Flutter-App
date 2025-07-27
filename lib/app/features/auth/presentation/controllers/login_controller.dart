@@ -25,7 +25,7 @@ class LoginController with ChangeNotifier {
       } else if (e.code == 'invalid-email') {
         errorMessage = 'Please enter a valid email address.';
       } else {
-        errorMessage = 'Login failed. Please try again later.';
+        errorMessage = 'Login failed: ${e.message ?? e.code}';
       }
     } catch (e) {
       errorMessage = 'Something went wrong. Please check your connection.';

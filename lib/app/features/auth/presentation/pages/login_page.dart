@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hotelbooking/app/features/auth/presentation/controllers/login_controller.dart';
 import 'package:hotelbooking/app/features/owner/presentation/pages/hotel_details.dart';
 import 'package:provider/provider.dart';
-
 import 'package:hotelbooking/app/core/widgets/widget_support.dart';
-import 'package:hotelbooking/app/features/hotel/presentation/pages/main_navigation_page.dart';
 import 'signup_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -21,6 +19,19 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final controller = Provider.of<LoginController>(context);
+
+    // ✅ Show error message automatically when it changes
+    if (controller.errorMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(controller.errorMessage!),
+            backgroundColor: Colors.red,
+          ),
+        );
+        controller.errorMessage = null; // Reset after showing
+      });
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -134,49 +145,47 @@ class _LoginPageState extends State<LoginPage> {
             /// Login Button
             Center(
               child: GestureDetector(
-                onTap: () async {
-                  final email = emailController.text.trim();
-                  final password = passwordController.text.trim();
+                onTap: controller.isLoading
+                    ? null
+                    : () async {
+                        final email = emailController.text.trim();
+                        final password = passwordController.text.trim();
 
-                  if (email.isNotEmpty && password.isNotEmpty) {
-                    await controller.login(email, password);
+                        if (email.isNotEmpty && password.isNotEmpty) {
+                          await controller.login(email, password);
 
-                    if (controller.errorMessage == null) {
-                      //  Success Message
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Login Successful"),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
+                          if (controller.errorMessage == null) {
+                            // Success message
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Login Successful"),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
 
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const HotelDetailsByOwnerPage(),
-                        ),
-                      );
-                    } else {
-                      //  Error Message from controller
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(controller.errorMessage!),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please fill all fields')),
-                    );
-                  }
-                },
-
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const HotelDetailsByOwnerPage(),
+                              ),
+                            );
+                          }
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Please fill all fields'),
+                            ),
+                          );
+                        }
+                      },
                 child: Container(
                   height: 55.0,
                   width: MediaQuery.of(context).size.width * 0.8,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0766B3),
+                    color: controller.isLoading
+                        ? Colors.grey
+                        : const Color(0xFF0766B3),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Center(
