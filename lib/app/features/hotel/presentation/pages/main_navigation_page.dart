@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hotelbooking/app/features/hotel/presentation/pages/home.dart';
+import 'package:hotelbooking/app/features/hotel/presentation/pages/home_page.dart';
 import '../widgets/bottom_nav_bar.dart';
 
 class MainNavigationPage extends StatefulWidget {

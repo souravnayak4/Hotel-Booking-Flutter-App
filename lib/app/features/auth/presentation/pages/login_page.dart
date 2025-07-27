@@ -20,7 +20,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final controller = Provider.of<LoginController>(context);
 
-    // ✅ Show error message automatically when it changes
+    //  Show error message automatically when it changes
     if (controller.errorMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(

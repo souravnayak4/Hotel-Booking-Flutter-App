@@ -1,7 +1,7 @@
 import 'package:hotelbooking/app/features/auth/domain/auth_repository.dart';
 import 'package:hotelbooking/app/features/auth/data/datasources/auth_local_data_source.dart';
 import 'package:hotelbooking/app/features/auth/data/datasources/auth_remote_data_source.dart';
-import 'package:hotelbooking/app/features/auth/data/datasources/database.dart';
+import 'package:hotelbooking/app/core/services/database.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;

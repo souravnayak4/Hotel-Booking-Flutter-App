@@ -1,30 +1,44 @@
 import 'dart:io';
+import 'package:hotelbooking/app/core/services/cloudinary_config.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HotelController {
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-  /// Upload image to Firebase Storage
-  Future<String> uploadImage(File imageFile) async {
-    final fileName = "${DateTime.now().millisecondsSinceEpoch}.jpg";
-    final ref = FirebaseStorage.instance
-        .ref()
-        .child("hotel_images")
-        .child(fileName);
+  /// Upload image to Cloudinary
+  Future<String?> uploadImage(File imageFile) async {
+    try {
+      final url = Uri.parse(
+        "https://api.cloudinary.com/v1_1/${CloudinaryConfig.cloudName}/image/upload",
+      );
+      final request = http.MultipartRequest("POST", url)
+        ..fields['upload_preset'] = CloudinaryConfig.uploadPreset
+        ..files.add(await http.MultipartFile.fromPath('file', imageFile.path));
 
-    // Upload image
-    await ref.putFile(imageFile);
+      final response = await request.send();
+      final resBody = await response.stream.bytesToString();
+      final jsonRes = json.decode(resBody);
 
-    //  Return the download URL
-    return await ref.getDownloadURL();
+      if (response.statusCode == 200 && jsonRes['secure_url'] != null) {
+        return jsonRes['secure_url'];
+      } else {
+        print("Cloudinary upload failed: $jsonRes");
+        return null;
+      }
+    } catch (e) {
+      print("Error uploading image: $e");
+      return null;
+    }
   }
 
-  /// Save Hotel Details
+  /// Save Hotel Details to Firestore
   Future<String?> saveHotel({
     required String hotelName,
     required String hotelAddress,
+    required String aboutPlace,
     required String city,
     required String checkIn,
     required String checkOut,
@@ -37,49 +51,54 @@ class HotelController {
 
       String ownerId = currentUser.uid;
 
-      //  Upload image and store download URL
-      String imageUrl = await uploadImage(hotelImage);
+      // Upload Hotel Main Image
+      String? imageUrl = await uploadImage(hotelImage);
+      if (imageUrl == null) return "Hotel image upload failed";
+
+      // Upload Room Images
+      List<Map<String, dynamic>> formattedCategories = [];
+      for (var room in roomCategories) {
+        File? roomImgFile = room['image'];
+        if (roomImgFile == null) continue;
+
+        String? roomImageUrl = await uploadImage(roomImgFile);
+        if (roomImageUrl == null) return "Room image upload failed";
+
+        formattedCategories.add({
+          "categoryName": room["categoryName"] ?? "",
+          "price": room["price"] ?? "",
+          "description": room["description"] ?? "",
+          "features": room["selectedFeatures"] ?? [],
+          "image": roomImageUrl,
+        });
+      }
+
       String hotelId = "${ownerId}_${DateTime.now().millisecondsSinceEpoch}";
 
-      // Static admin data (or dynamic from Firestore)
-      const String adminId = "ADMIN_UID";
-      const String adminEmail = "test1@mail.com";
-      const String adminName = "hello";
+      const String adminId = "757525244555222";
+      const String adminEmail = "admin@mail.com";
+      const String adminName = "admin";
 
-      // Format room categories
-      List<Map<String, dynamic>> formattedCategories = roomCategories.map((
-        cat,
-      ) {
-        return {
-          "categoryName": cat["categoryName"] ?? "",
-          "price": cat["price"] ?? "",
-          "description": cat["description"] ?? "",
-          "features": cat["selectedFeatures"] ?? [],
-        };
-      }).toList();
-
-      //  Hotel Data
       Map<String, dynamic> hotelData = {
         "adminId": adminId,
         "adminEmail": adminEmail,
         "adminName": adminName,
         "hotelName": hotelName,
         "hotelAddress": hotelAddress,
+        "aboutPlace": aboutPlace,
         "city": city,
         "checkIn": checkIn,
         "checkOut": checkOut,
-        "ownerId": ownerId,
-        "hotelImage": imageUrl, //  Use download URL here
+        "hotelownerId": ownerId,
+        "hotelImage": imageUrl,
         "roomCategories": formattedCategories,
         "createdAt": FieldValue.serverTimestamp(),
       };
 
-      //  Save to Firestore
       await firestore.collection("hotels").doc(hotelId).set(hotelData);
-
-      return null; // Success
+      return null;
     } catch (e) {
-      return e.toString();
+      return "Error saving hotel: $e";
     }
   }
 }

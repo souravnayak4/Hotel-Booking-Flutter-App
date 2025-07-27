@@ -16,6 +16,7 @@ class _HotelDetailsByOwnerPageState extends State<HotelDetailsByOwnerPage> {
 
   final TextEditingController hotelNameController = TextEditingController();
   final TextEditingController hotelAddressController = TextEditingController();
+  final TextEditingController aboutPlaceController = TextEditingController();
   final TextEditingController checkInController = TextEditingController();
   final TextEditingController checkOutController = TextEditingController();
 
@@ -50,7 +51,7 @@ class _HotelDetailsByOwnerPageState extends State<HotelDetailsByOwnerPage> {
   File? hotelImage;
   final ImagePicker _picker = ImagePicker();
 
-  /// Pick Image
+  /// Pick Hotel Image
   Future<void> pickImage() async {
     final XFile? pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -62,6 +63,18 @@ class _HotelDetailsByOwnerPageState extends State<HotelDetailsByOwnerPage> {
     }
   }
 
+  /// Pick Image for Room Category
+  Future<void> pickRoomImage(int index) async {
+    final XFile? pickedFile = await _picker.pickImage(
+      source: ImageSource.gallery,
+    );
+    if (pickedFile != null) {
+      setState(() {
+        roomCategories[index]['image'] = File(pickedFile.path);
+      });
+    }
+  }
+
   /// Pick Time
   Future<void> pickTime(TextEditingController controller) async {
     TimeOfDay? time = await showTimePicker(
@@ -69,7 +82,9 @@ class _HotelDetailsByOwnerPageState extends State<HotelDetailsByOwnerPage> {
       initialTime: TimeOfDay.now(),
     );
     if (time != null) {
-      controller.text = time.format(context);
+      setState(() {
+        controller.text = time.format(context);
+      });
     }
   }
 
@@ -80,6 +95,7 @@ class _HotelDetailsByOwnerPageState extends State<HotelDetailsByOwnerPage> {
         "price": "",
         "description": "",
         "selectedFeatures": <String>[],
+        "image": null, // Add image field
       });
     });
   }
@@ -98,6 +114,7 @@ class _HotelDetailsByOwnerPageState extends State<HotelDetailsByOwnerPage> {
     }
     if (hotelNameController.text.trim().isEmpty ||
         hotelAddressController.text.trim().isEmpty ||
+        aboutPlaceController.text.trim().isEmpty ||
         selectedCity == null ||
         checkInController.text.trim().isEmpty ||
         checkOutController.text.trim().isEmpty ||
@@ -106,11 +123,19 @@ class _HotelDetailsByOwnerPageState extends State<HotelDetailsByOwnerPage> {
       return;
     }
 
+    for (var room in roomCategories) {
+      if (room['image'] == null) {
+        _showSnackBar("Please select an image for each room category");
+        return;
+      }
+    }
+
     setState(() => isLoading = true);
 
     String? result = await _hotelController.saveHotel(
       hotelName: hotelNameController.text.trim(),
       hotelAddress: hotelAddressController.text.trim(),
+      aboutPlace: aboutPlaceController.text.trim(),
       city: selectedCity!,
       checkIn: checkInController.text.trim(),
       checkOut: checkOutController.text.trim(),
@@ -137,6 +162,7 @@ class _HotelDetailsByOwnerPageState extends State<HotelDetailsByOwnerPage> {
   void clearForm() {
     hotelNameController.clear();
     hotelAddressController.clear();
+    aboutPlaceController.clear();
     checkInController.clear();
     checkOutController.clear();
     setState(() {
@@ -205,6 +231,7 @@ class _HotelDetailsByOwnerPageState extends State<HotelDetailsByOwnerPage> {
                       const SizedBox(height: 15),
                       buildTextField("Hotel Name", hotelNameController),
                       buildTextField("Hotel Address", hotelAddressController),
+                      buildLargeTextField("About Place", aboutPlaceController),
                       buildDropdown(),
                       buildTimePicker("Check-in Time", checkInController),
                       buildTimePicker("Check-out Time", checkOutController),
@@ -271,6 +298,20 @@ class _HotelDetailsByOwnerPageState extends State<HotelDetailsByOwnerPage> {
     );
   }
 
+  Widget buildLargeTextField(String label, TextEditingController controller) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      child: TextField(
+        controller: controller,
+        maxLines: 4,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      ),
+    );
+  }
+
   Widget buildDropdown() {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -289,21 +330,16 @@ class _HotelDetailsByOwnerPageState extends State<HotelDetailsByOwnerPage> {
   }
 
   Widget buildTimePicker(String label, TextEditingController controller) {
-    return GestureDetector(
-      onTap: () => pickTime(controller),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 20),
-        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(controller.text.isEmpty ? label : controller.text),
-            const Icon(Icons.access_time),
-          ],
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      child: TextField(
+        controller: controller,
+        readOnly: true,
+        onTap: () => pickTime(controller),
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          suffixIcon: const Icon(Icons.access_time),
         ),
       ),
     );
@@ -330,6 +366,29 @@ class _HotelDetailsByOwnerPageState extends State<HotelDetailsByOwnerPage> {
                 ),
               ],
             ),
+            GestureDetector(
+              onTap: () => pickRoomImage(index),
+              child: Container(
+                height: 120,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.black),
+                  image: roomCategories[index]['image'] != null
+                      ? DecorationImage(
+                          image: FileImage(roomCategories[index]['image']),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: roomCategories[index]['image'] == null
+                    ? const Center(
+                        child: Icon(Icons.add_a_photo, color: Colors.blue),
+                      )
+                    : null,
+              ),
+            ),
+            const SizedBox(height: 10),
             TextField(
               decoration: const InputDecoration(
                 labelText: "Room Category Name",

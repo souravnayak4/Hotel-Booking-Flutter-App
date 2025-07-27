@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:hotelbooking/app/core/widgets/widget_support.dart';
 import 'package:hotelbooking/app/features/auth/presentation/controllers/signup_controller.dart';
 import 'package:hotelbooking/app/features/auth/presentation/pages/login_page.dart';
-import 'package:hotelbooking/app/features/hotel/presentation/pages/main_navigation_page.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
