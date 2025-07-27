@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hotelbooking/app/features/auth/presentation/pages/login_page.dart';
 import 'package:hotelbooking/app/features/hotel/presentation/pages/main_navigation_page.dart';
 import 'package:hotelbooking/app/features/owner/presentation/pages/hotel_details.dart';
+import 'package:hotelbooking/app/features/owner/presentation/pages/owner_home_page.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -78,7 +79,7 @@ class AuthWrapper extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasData) {
-          return const MainNavigationPage(); // User is logged in
+          return const OwnerAdminPage(); // User is logged in
         }
         return const LoginPage(); //
       },

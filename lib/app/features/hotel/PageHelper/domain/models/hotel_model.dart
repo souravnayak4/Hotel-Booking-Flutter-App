@@ -24,7 +24,7 @@ class HotelModel {
   }
 }
 
-//  Detailed Hotel Model
+// Detailed Hotel Model
 class HotelDetailModel {
   final String hotelName;
   final String hotelImage;

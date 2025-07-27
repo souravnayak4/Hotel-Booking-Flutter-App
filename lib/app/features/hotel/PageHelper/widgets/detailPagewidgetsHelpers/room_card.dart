@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:hotelbooking/app/features/hotel/presentation/pages/booking_confirmation_page.dart';
 import 'package:intl/intl.dart';
 
 class RoomCard extends StatefulWidget {
   final Map<String, dynamic> category;
+  final String hotelName;
   final Color primaryColor;
 
   const RoomCard({
     super.key,
+    required this.hotelName,
     required this.category,
     required this.primaryColor,
   });
@@ -22,7 +25,8 @@ class _RoomCardState extends State<RoomCard> {
 
   int get nights {
     if (checkInDate != null && checkOutDate != null) {
-      return checkOutDate!.difference(checkInDate!).inDays;
+      final diff = checkOutDate!.difference(checkInDate!).inDays;
+      return diff > 0 ? diff : 0;
     }
     return 0;
   }
@@ -30,15 +34,24 @@ class _RoomCardState extends State<RoomCard> {
   double get totalPrice {
     double pricePerNight =
         double.tryParse(widget.category['price'].toString()) ?? 0;
-    return pricePerNight * nights * rooms; //  Calculate based on rooms
+    return pricePerNight * nights * rooms;
   }
 
   Future<void> pickDate(BuildContext context, bool isCheckIn) async {
     final DateTime now = DateTime.now();
+
     final DateTime initialDate = isCheckIn
+        ? (checkInDate ?? now)
+        : (checkInDate != null
+              ? checkInDate!.add(const Duration(days: 1))
+              : now.add(const Duration(days: 1)));
+
+    final DateTime firstDate = isCheckIn
         ? now
-        : (checkInDate ?? now).add(const Duration(days: 1));
-    final DateTime firstDate = now;
+        : (checkInDate != null
+              ? checkInDate!.add(const Duration(days: 1))
+              : now.add(const Duration(days: 1)));
+
     final DateTime lastDate = now.add(const Duration(days: 365));
 
     final DateTime? picked = await showDatePicker(
@@ -52,6 +65,7 @@ class _RoomCardState extends State<RoomCard> {
       setState(() {
         if (isCheckIn) {
           checkInDate = picked;
+          // Reset checkOutDate if it is before new checkInDate
           if (checkOutDate != null && checkOutDate!.isBefore(picked)) {
             checkOutDate = null;
           }
@@ -66,6 +80,9 @@ class _RoomCardState extends State<RoomCard> {
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
 
+    // Enable booking only if both dates are selected and nights > 0
+    bool canBook = checkInDate != null && checkOutDate != null && nights > 0;
+
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 4,
@@ -73,7 +90,7 @@ class _RoomCardState extends State<RoomCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          /// Room Image with fallback & loading
+          // Room Image with Price Tag
           ClipRRect(
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(16),
@@ -132,13 +149,13 @@ class _RoomCardState extends State<RoomCard> {
             ),
           ),
 
-          /// Details Section
+          // Details Section
           Padding(
             padding: const EdgeInsets.all(14.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                /// Room Name
+                // Room Name
                 Text(
                   widget.category['categoryName'] ?? 'Room Category',
                   style: TextStyle(
@@ -155,7 +172,7 @@ class _RoomCardState extends State<RoomCard> {
                 ),
                 const SizedBox(height: 10),
 
-                /// Features
+                // Features
                 if (widget.category['features'] != null)
                   Wrap(
                     spacing: 6,
@@ -170,7 +187,7 @@ class _RoomCardState extends State<RoomCard> {
                   ),
                 const SizedBox(height: 14),
 
-                /// Date Selection
+                // Date Selection
                 Row(
                   children: [
                     Expanded(
@@ -200,7 +217,7 @@ class _RoomCardState extends State<RoomCard> {
                 ),
                 const SizedBox(height: 14),
 
-                /// Rooms Selector
+                // Rooms Selector
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -225,15 +242,18 @@ class _RoomCardState extends State<RoomCard> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.add_circle_outline),
-                          onPressed: () => setState(() => rooms++),
+                          onPressed: rooms < 5
+                              ? () => setState(() => rooms++)
+                              : null,
                         ),
                       ],
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 10),
 
-                /// Price Info
+                // Price Info
                 if (nights > 0)
                   Text(
                     'Stay: $nights night(s) | Rooms: $rooms | Total: ₹${totalPrice.toStringAsFixed(2)}',
@@ -245,7 +265,7 @@ class _RoomCardState extends State<RoomCard> {
                   ),
                 const SizedBox(height: 14),
 
-                /// Book Button
+                // Book Button with Navigation
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -254,27 +274,44 @@ class _RoomCardState extends State<RoomCard> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      backgroundColor: widget.primaryColor,
+                      backgroundColor: canBook
+                          ? widget.primaryColor
+                          : Colors.grey,
                     ),
-                    onPressed: () {
-                      if (checkInDate == null || checkOutDate == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Please select check-in and check-out dates',
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Booking confirmed for $rooms room(s) & $nights night(s)! Total ₹${totalPrice.toStringAsFixed(2)}',
-                          ),
-                        ),
-                      );
-                    },
+                    onPressed: canBook
+                        ? () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => BookingSummaryPage(
+                                  bookingData: {
+                                    'hotelId': widget.category['id'] ?? '',
+                                    'hotelName': widget.hotelName,
+                                    'roomType': widget.category['categoryName'],
+                                    'checkIn': DateFormat(
+                                      'dd MMM yyyy',
+                                    ).format(checkInDate!),
+                                    'checkOut': DateFormat(
+                                      'dd MMM yyyy',
+                                    ).format(checkOutDate!),
+                                    'rooms': rooms,
+                                    'nights': nights,
+                                    'price': totalPrice,
+                                    'image': widget.category['image'],
+                                  },
+                                ),
+                              ),
+                            );
+                          }
+                        : () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Please select valid check-in and check-out dates.',
+                                ),
+                              ),
+                            );
+                          },
                     child: const Text(
                       'Book Now',
                       style: TextStyle(

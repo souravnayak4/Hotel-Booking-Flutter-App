@@ -60,7 +60,7 @@ class HotelCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        '\$${hotelData["roomCategories"][0]['price']} / night',
+                        '\₹${hotelData["roomCategories"][0]['price']} / night',
                         style: TextStyle(
                           fontSize: size.width * 0.04,
                           fontWeight: FontWeight.bold,
